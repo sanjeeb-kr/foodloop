@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Register Account — FoodLoop{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 580px; margin-top: 10px;">
+  <div class="card" style="padding: 32px;">
+    <div style="text-align: center; margin-bottom: 24px;">
+      <h1 style="font-size: 1.8rem; margin-bottom: 6px;">Create an Account</h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">Join FoodLoop to donate or receive surplus meals.</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('register') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="form-group">
+        <label class="form-label" for="name">Full Name or Representative Name *</label>
+        <input type="text" id="name" name="name" class="form-control" value="{{ form_data.get('name', '') }}" placeholder="e.g. Rahul Sharma" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Email Address *</label>
+        <input type="email" id="email" name="email" class="form-control" value="{{ form_data.get('email', '') }}" placeholder="name@example.com" required>
+        <div class="form-help">Must be a unique email (enforced by MongoDB unique index).</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password *</label>
+        <input type="password" id="password" name="password" class="form-control" placeholder="Minimum 6 characters" required>
+        <div class="form-help">Hashed securely using Werkzeug (never stored in plain text).</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="role">Account Role *</label>
+        <select id="role" name="role" class="form-select" required>
+          <option value="" disabled selected>-- Select your platform role --</option>
+          <option value="donor" {% if form_data.get('role') == 'donor' %}selected{% endif %}>
+            Donor (Canteen, Hostel, Bakery, Restaurant, Event Caterer)
+          </option>
+          <option value="receiver" {% if form_data.get('role') == 'receiver' %}selected{% endif %}>
+            Receiver (NGO, Community Kitchen, Charity, Shelter)
+          </option>
+        </select>
+        <div class="form-help">Privilege rules are strictly enforced server-side.</div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-col form-group">
+          <label class="form-label" for="organization_name">Organization / Entity Name</label>
+          <input type="text" id="organization_name" name="organization_name" class="form-control" value="{{ form_data.get('organization_name', '') }}" placeholder="e.g. Central Campus Mess">
+        </div>
+        <div class="form-col form-group">
+          <label class="form-label" for="city">City *</label>
+          <input type="text" id="city" name="city" class="form-control" value="{{ form_data.get('city', '') }}" placeholder="e.g. Bengaluru" required>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 14px; padding: 11px;">
+        Register Account
+      </button>
+    </form>
+
+    <div style="text-align: center; margin-top: 22px; font-size: 0.9rem; color: var(--text-muted);">
+      Already have an account? 
+      <a href="{{ url_for('login') }}" style="color: var(--primary-light); font-weight: 600; text-decoration: none;">Log in</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Log In — FoodLoop{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 480px; margin-top: 20px;">
+  <div class="card" style="padding: 32px;">
+    <div style="text-align: center; margin-bottom: 24px;">
+      <h1 style="font-size: 1.8rem; margin-bottom: 6px;">Welcome Back</h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">Log in to manage your donations or claims.</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('login', next=request.args.get('next', '')) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="form-group">
+        <label class="form-label" for="email">Email Address</label>
+        <input type="email" id="email" name="email" class="form-control" placeholder="name@example.com" required autofocus>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px; padding: 11px;">
+        Log In
+      </button>
+    </form>
+
+    <div style="text-align: center; margin-top: 22px; font-size: 0.9rem; color: var(--text-muted);">
+      Don't have an account yet? 
+      <a href="{{ url_for('register') }}" style="color: var(--primary-light); font-weight: 600; text-decoration: none;">Register here</a>
+    </div>
+
+    <div style="margin-top: 24px; padding: 12px; background: #f8fafc; border-radius: var(--radius-sm); border: 1px dashed #cbd5e1; font-size: 0.8rem; color: #64748b;">
+      <strong>Academic Note:</strong> Demo seed accounts use randomly generated unexposed passphrases for security. Please register your own user account with role <em>Donor</em> or <em>Receiver</em> to test live features.
+    </div>
+  </div>
+</div>
+{% endblock %}

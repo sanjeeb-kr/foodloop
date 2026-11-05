@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: foodloop
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: DB_NAME
+        value: foodloop
+      - key: SECRET_KEY
+        generateValue: true

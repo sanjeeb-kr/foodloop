@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics & Aggregation Reports — FoodLoop{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1>Platform Analytics</h1>
+    <p>Comprehensive aggregation reports calculated natively inside MongoDB using <code>aggregate()</code> pipelines.</p>
+  </div>
+
+  <!-- Key Metrics from Pipeline 5 and Summary -->
+  <div class="grid-4" style="margin-bottom: 35px;">
+    <div class="stat-card">
+      <div class="stat-label">Total Donations</div>
+      <div class="stat-value">{{ summary.total_donations }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Servings Rescued</div>
+      <div class="stat-value" style="color: var(--status-available);">{{ summary.collected_servings }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Available Servings</div>
+      <div class="stat-value" style="color: var(--status-claimed);">{{ summary.available_servings }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Finalized Collection Rate</div>
+      <div class="stat-value" style="color: #2563eb;">{{ rate_data.collection_rate_percent }}%</div>
+      <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+        Pipeline 5: {{ rate_data.collected_count }} / {{ rate_data.total_finalized }} finalized
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row 1: Pipeline 1 (Category Doughnut) & Pipeline 2 (Status Bar) -->
+  <div class="grid-2" style="margin-bottom: 35px;">
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 class="card-title" style="margin-bottom: 0;">Report 1: Servings by Category</h3>
+        <span class="badge" style="background: #e2e8f0; color: #334155;">$match &rarr; $group</span>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+        Natively filters finalized <code>collected</code> donations and aggregates servings by category.
+      </p>
+      <div style="height: 280px; position: relative;">
+        <canvas id="categoryChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 class="card-title" style="margin-bottom: 0;">Report 2: Donations by Status</h3>
+        <span class="badge" style="background: #e2e8f0; color: #334155;">$group &rarr; $sort</span>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+        Tracks distribution across all 5 states: available, claimed, collected, cancelled, expired.
+      </p>
+      <div style="height: 280px; position: relative;">
+        <canvas id="statusChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart Row 2: Pipeline 4 (Monthly Collection Trends) -->
+  <div class="card" style="margin-bottom: 35px; padding: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h3 class="card-title" style="margin-bottom: 0;">Report 4: Monthly Collection Trends (Timeline)</h3>
+      <span class="badge" style="background: #e2e8f0; color: #334155;">$dateToString &rarr; $group &rarr; $sort</span>
+    </div>
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+      Chronological trendline grouping collected donations by month formatted string (YYYY-MM).
+    </p>
+    <div style="height: 260px; position: relative;">
+      <canvas id="monthlyTrendsChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Pipeline 3: Top Contributing Donors Table -->
+  <div class="card" style="padding: 24px; margin-bottom: 30px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h3 class="card-title" style="margin-bottom: 0;">Report 3: Top Contributing Donors</h3>
+      <span class="badge" style="background: #e2e8f0; color: #334155;">$group &rarr; $lookup &rarr; $sort</span>
+    </div>
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+      Demonstrates cross-collection referencing resolution via <code>$lookup</code> from <code>users</code> into <code>donations</code>.
+    </p>
+
+    {% if top_donors %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Donor / Organization</th>
+              <th>City</th>
+              <th>Completed Rescues</th>
+              <th>Total Servings Rescued</th>
+              <th>Impact Rank</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for donor in top_donors %}
+              <tr>
+                <td>
+                  <strong>{{ donor.organization }}</strong>
+                  <div style="font-size: 0.8rem; color: var(--text-muted);">{{ donor.donor_name }}</div>
+                </td>
+                <td>{{ donor.city }}</td>
+                <td><strong>{{ donor.collected_donations }}</strong> donations</td>
+                <td><strong style="color: var(--status-available);">{{ donor.total_servings }}</strong> servings</td>
+                <td>
+                  <span class="badge" style="background: #fef3c7; color: #b45309;">Top #{{ loop.index }}</span>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state" style="padding: 20px;">
+        <p style="color: var(--text-muted);">No collected donations recorded yet to compute donor rankings.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Initialize Chart.js with pure MongoDB aggregation data
+  document.addEventListener("DOMContentLoaded", function() {
+    const categoryData = {{ category_data | tojson }};
+    const statusData = {{ status_data | tojson }};
+    const monthlyTrends = {{ monthly_trends | tojson }};
+    initAnalyticsCharts(categoryData, statusData, monthlyTrends);
+  });
+</script>
+{% endblock %}

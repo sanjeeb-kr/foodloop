@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Donor Dashboard — FoodLoop{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 12px;">
+    <div>
+      <h1>Donor Dashboard</h1>
+      <p style="color: var(--text-muted);">Manage your active food donations, view claim progress, and trace collection history.</p>
+    </div>
+    <a href="{{ url_for('create_donation') }}" class="btn btn-accent btn-lg">+ Post Surplus Food</a>
+  </div>
+
+  <!-- Donor Key Metrics -->
+  <div class="grid-4" style="margin-bottom: 35px;">
+    <div class="stat-card">
+      <div class="stat-label">Total Listings</div>
+      <div class="stat-value">{{ stats.total }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Active / Available</div>
+      <div class="stat-value" style="color: var(--status-available);">{{ stats.available }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Claimed by Receivers</div>
+      <div class="stat-value" style="color: var(--status-claimed);">{{ stats.claimed }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Servings Rescued</div>
+      <div class="stat-value" style="color: #2563eb;">{{ stats.servings_rescued }}</div>
+    </div>
+  </div>
+
+  <!-- Listings Table -->
+  <div class="card" style="padding: 24px; margin-bottom: 30px;">
+    <h2 style="font-size: 1.3rem; margin-bottom: 16px;">Your Donation Listings</h2>
+
+    {% if listings %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Food Item</th>
+              <th>Category</th>
+              <th>Servings</th>
+              <th>Pickup Deadline</th>
+              <th>Status</th>
+              <th>Receiver Claim</th>
+              <th style="text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in listings %}
+              <tr>
+                <td>
+                  <strong>{{ item.food_name }}</strong>
+                  <div style="font-size: 0.8rem; color: var(--text-muted);">
+                    {{ item.pickup_location.area }}, {{ item.pickup_location.city }}
+                  </div>
+                </td>
+                <td>{{ item.category.replace('_', ' ').capitalize() }}</td>
+                <td><strong>{{ item.servings }}</strong></td>
+                <td>
+                  <span style="font-size: 0.88rem;">{{ item.pickup_deadline | ist_format }}</span>
+                </td>
+                <td>
+                  <span class="badge {{ item.status | status_badge_class }}">{{ item.status }}</span>
+                </td>
+                <td>
+                  {% if item.receiver %}
+                    <span style="font-size: 0.88rem; font-weight: 500;">
+                      {{ item.receiver.organization_name or item.receiver.name }}
+                    </span>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">
+                      Claimed: {{ item.claim.claimed_at | ist_format('%d %b, %I:%M %p') }}
+                    </div>
+                  {% elif item.status == 'available' %}
+                    <span style="font-size: 0.82rem; color: var(--text-muted); font-style: italic;">Awaiting claim</span>
+                  {% else %}
+                    <span style="font-size: 0.82rem; color: var(--text-muted);">&mdash;</span>
+                  {% endif %}
+                </td>
+                <td style="text-align: right;">
+                  <div style="display: inline-flex; gap: 6px;">
+                    {% if item.status == 'available' %}
+                      <a href="{{ url_for('edit_donation', donation_id=item._id) }}" class="btn btn-outline btn-sm">Edit</a>
+                      
+                      <form action="{{ url_for('cancel_donation', donation_id=item._id) }}" method="POST" data-confirm="Cancel this listing? Receivers will no longer be able to claim it.">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-outline btn-sm" style="color: #b91c1c;">Cancel</button>
+                      </form>
+                      
+                      <form action="{{ url_for('delete_donation', donation_id=item._id) }}" method="POST" data-confirm="Permanently delete this donation from database?">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                      </form>
+                    {% elif item.status == 'claimed' %}
+                      <form action="{{ url_for('cancel_donation', donation_id=item._id) }}" method="POST" data-confirm="Cancel this claimed listing? The claiming receiver will be informed.">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-outline btn-sm" style="color: #b91c1c;">Cancel</button>
+                      </form>
+                    {% elif item.status == 'cancelled' %}
+                      <form action="{{ url_for('delete_donation', donation_id=item._id) }}" method="POST" data-confirm="Permanently delete this cancelled record?">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                      </form>
+                    {% else %}
+                      <span style="font-size: 0.82rem; color: var(--text-muted);">Completed</span>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon">&#127858;</div>
+        <h3>No Donations Created Yet</h3>
+        <p>Post your first batch of surplus food to connect with local NGOs and prevent food waste.</p>
+        <a href="{{ url_for('create_donation') }}" class="btn btn-primary btn-sm">+ Post Food Now</a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

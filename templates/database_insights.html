@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Database Insights & Query Optimization — FoodLoop{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+      <h1>Database Insights &amp; Performance Analysis</h1>
+      <span class="badge" style="background: #1b4332; color: #ffffff;">CSE494 Academic Feature</span>
+    </div>
+    <p>Live MongoDB inspection: Schema validation, referencing vs embedding, indexes, and PyMongo <code>explain()</code> query plans.</p>
+  </div>
+
+  <!-- Connection Status Banner -->
+  <div class="alert {% if conn_ok %}alert-success{% else %}alert-danger{% endif %}" style="margin-bottom: 25px;">
+    <strong>MongoDB Status:</strong> {{ conn_msg }}
+  </div>
+
+  <!-- Section 1: Collections and Index Statistics -->
+  <div class="card" style="margin-bottom: 35px; padding: 24px;">
+    <h2 style="font-size: 1.35rem; margin-bottom: 12px;">1. MongoDB Collections &amp; Active Indexes</h2>
+    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">
+      Live index information extracted using PyMongo's <code>collection.index_information()</code>.
+    </p>
+
+    <div class="grid-2">
+      {% for col in db_stats.collections %}
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 18px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h3 style="font-size: 1.15rem; color: var(--primary-color);">Collection: <code>{{ col.name }}</code></h3>
+            <span class="badge" style="background: #e2e8f0; color: #1e293b;">{{ col.document_count }} Docs</span>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">{{ col.purpose }}</p>
+
+          <h4 style="font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">Registered Indexes:</h4>
+          <ul style="list-style: none; font-size: 0.84rem;">
+            {% for idx in col.indexes %}
+              <li style="padding: 6px 0; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between;">
+                <span><strong>{{ idx.name }}</strong> ({{ idx.keys }})</span>
+                {% if idx.unique %}
+                  <span class="badge" style="background: #dbeafe; color: #1e40af; font-size: 0.7rem;">UNIQUE</span>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Section 2: Query Optimization & Execution Plans (explain()) -->
+  <div class="card" style="margin-bottom: 35px; padding: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h2 style="font-size: 1.35rem; margin-bottom: 0;">2. Query Optimization &amp; Execution Plans (explain)</h2>
+      <span class="badge" style="background: #e0e7ff; color: #3730a3;">IXSCAN vs COLLSCAN</span>
+    </div>
+    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">
+      Real query execution statistics retrieved via PyMongo's <code>cursor.explain('executionStats')</code>.
+    </p>
+
+    <!-- Comparison 1: Compound Index vs Forced COLLSCAN -->
+    {% if query_analysis.status_deadline_comparison %}
+      {% set q1 = query_analysis.status_deadline_comparison %}
+      <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 18px; margin-bottom: 20px;">
+        <h3 style="font-size: 1.05rem; margin-bottom: 4px;">Query: Available Donations Ordered by Pickup Deadline</h3>
+        <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 14px;"><code>{{ q1.query_description }}</code></p>
+
+        <div class="grid-2">
+          <!-- Indexed -->
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-sm); padding: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <strong style="color: #166534;">WITH Compound Index</strong>
+              <span class="badge badge-available">{{ q1.indexed.scan_type }}</span>
+            </div>
+            <ul style="list-style: none; font-size: 0.85rem; line-height: 1.8;">
+              <li><strong>Index Used:</strong> <code>{{ q1.indexed.index_used }}</code></li>
+              <li><strong>Documents Returned:</strong> {{ q1.indexed.nReturned }}</li>
+              <li><strong>Total Keys Examined:</strong> {{ q1.indexed.totalKeysExamined }}</li>
+              <li><strong>Total Docs Examined:</strong> {{ q1.indexed.totalDocsExamined }}</li>
+              <li><strong>Execution Time:</strong> {{ q1.indexed.executionTimeMillis }} ms</li>
+            </ul>
+          </div>
+
+          <!-- Unindexed / Forced Scan -->
+          <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-sm); padding: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <strong style="color: #991b1b;">WITHOUT Index (Hint Forced)</strong>
+              <span class="badge badge-cancelled">{{ q1.unindexed.scan_type }}</span>
+            </div>
+            <ul style="list-style: none; font-size: 0.85rem; line-height: 1.8;">
+              <li><strong>Index Used:</strong> <code>{{ q1.unindexed.index_used }}</code></li>
+              <li><strong>Documents Returned:</strong> {{ q1.unindexed.nReturned }}</li>
+              <li><strong>Total Keys Examined:</strong> {{ q1.unindexed.totalKeysExamined }}</li>
+              <li><strong>Total Docs Examined:</strong> {{ q1.unindexed.totalDocsExamined }} (Full scan)</li>
+              <li><strong>Execution Time:</strong> {{ q1.unindexed.executionTimeMillis }} ms</li>
+            </ul>
+          </div>
+        </div>
+
+        <div style="margin-top: 12px; font-size: 0.82rem; color: var(--text-muted); background: #f8fafc; padding: 8px 12px; border-radius: 4px;">
+          <strong>Analysis:</strong> In an index scan (<code>IXSCAN</code>), MongoDB traverses the B-Tree index keys directly rather than reading every document in the collection. On small demonstration datasets execution times may be comparable, but <code>totalDocsExamined</code> clearly proves the efficiency difference.
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Queries 2 & 3: City Search & Text Search -->
+    <div class="grid-2">
+      {% if query_analysis.city_search %}
+        {% set q2 = query_analysis.city_search %}
+        <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 16px;">
+          <h4 style="font-size: 0.95rem; margin-bottom: 4px;">City &amp; Status Query</h4>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;"><code>{{ q2.query_description }}</code></p>
+          <ul style="list-style: none; font-size: 0.83rem; line-height: 1.7;">
+            <li><strong>Stage:</strong> <span class="badge badge-available">{{ q2.scan_type }}</span></li>
+            <li><strong>Index:</strong> <code>{{ q2.index_used }}</code></li>
+            <li><strong>Docs Examined:</strong> {{ q2.totalDocsExamined }}</li>
+            <li><strong>Time:</strong> {{ q2.executionTimeMillis }} ms</li>
+          </ul>
+        </div>
+      {% endif %}
+
+      {% if query_analysis.text_search %}
+        {% set q3 = query_analysis.text_search %}
+        <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 16px;">
+          <h4 style="font-size: 0.95rem; margin-bottom: 4px;">Text Search on Food Name</h4>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;"><code>{{ q3.query_description }}</code></p>
+          <ul style="list-style: none; font-size: 0.83rem; line-height: 1.7;">
+            <li><strong>Stage:</strong> <span class="badge" style="background: #ede9fe; color: #5b21b6;">{{ q3.scan_type }}</span></li>
+            <li><strong>Index:</strong> <code>{{ q3.index_used }}</code></li>
+            <li><strong>Keys Examined:</strong> {{ q3.totalKeysExamined }}</li>
+            <li><strong>Time:</strong> {{ q3.executionTimeMillis }} ms</li>
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Section 3: Data Modeling - Embedding vs Referencing -->
+  <div class="card" style="margin-bottom: 30px; padding: 24px;">
+    <h2 style="font-size: 1.35rem; margin-bottom: 12px;">3. NoSQL Modeling: Embedding vs Referencing</h2>
+    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">
+      FoodLoop strategically balances document embedding and referencing based on access patterns and normalization trade-offs.
+    </p>
+
+    <div class="grid-2">
+      <div style="background: #f8fafc; border-left: 4px solid var(--primary-accent); padding: 16px; border-radius: 4px;">
+        <h3 style="font-size: 1.05rem; color: var(--primary-color); margin-bottom: 8px;">Embedded Documents</h3>
+        <ul style="font-size: 0.88rem; line-height: 1.7; color: #374151;">
+          <li><strong><code>pickup_location</code>:</strong> Stored directly inside each donation. Avoids joins because location is fixed at listing time and frequently retrieved with the card.</li>
+          <li><strong><code>claim</code>:</strong> Embedded sub-document containing receiver reference and claim timestamp. Enables single-document atomic update operations.</li>
+          <li><strong><code>status_history</code>:</strong> Embedded array of audit transitions (1-to-few bounded growth, strictly within 16MB document limit).</li>
+        </ul>
+      </div>
+
+      <div style="background: #f8fafc; border-left: 4px solid #2563eb; padding: 16px; border-radius: 4px;">
+        <h3 style="font-size: 1.05rem; color: #1e40af; margin-bottom: 8px;">Referenced Documents (ObjectIds)</h3>
+        <ul style="font-size: 0.88rem; line-height: 1.7; color: #374151;">
+          <li><strong><code>donor_id</code> &rarr; <code>users._id</code>:</strong> References donor user account. Prevents repeating user profile and organization details in every single donation.</li>
+          <li><strong><code>claim.receiver_id</code> &rarr; <code>users._id</code>:</strong> References claiming receiver. Resolved dynamically via <code>$lookup</code> aggregation pipeline stage when needed.</li>
+          <li><strong>Benefit:</strong> Updating an organization name or phone number in <code>users</code> requires a single update rather than modifying thousands of historical donation records.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

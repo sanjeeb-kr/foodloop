@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Discover Food Donations — FoodLoop{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1>Available Food Donations</h1>
+    <p>Real-time listings of surplus food ready for collection by community receivers.</p>
+  </div>
+
+  <!-- Search & Filter Bar (Demonstrates MongoDB Indexes) -->
+  <div class="filter-bar">
+    <form method="GET" action="{{ url_for('discover_donations') }}">
+      <div class="form-row" style="align-items: flex-end;">
+        <div class="form-col" style="flex: 2;">
+          <label class="form-label" for="q">Search Food Name</label>
+          <input type="text" id="q" name="q" class="form-control" placeholder="Search rice, bread, biryani... (Text Index)" value="{{ current_query }}">
+        </div>
+
+        <div class="form-col">
+          <label class="form-label" for="category">Category</label>
+          <select id="category" name="category" class="form-select">
+            <option value="all">All Categories</option>
+            <option value="prepared_meal" {% if current_category == 'prepared_meal' %}selected{% endif %}>Prepared Meal</option>
+            <option value="bakery" {% if current_category == 'bakery' %}selected{% endif %}>Bakery</option>
+            <option value="fruits_vegetables" {% if current_category == 'fruits_vegetables' %}selected{% endif %}>Fruits &amp; Veg</option>
+            <option value="packaged_food" {% if current_category == 'packaged_food' %}selected{% endif %}>Packaged Food</option>
+            <option value="other" {% if current_category == 'other' %}selected{% endif %}>Other</option>
+          </select>
+        </div>
+
+        <div class="form-col">
+          <label class="form-label" for="city">City</label>
+          <input type="text" id="city" name="city" class="form-control" placeholder="e.g. Bengaluru" value="{{ current_city }}">
+        </div>
+
+        <div class="form-col">
+          <label class="form-label" for="dietary_type">Dietary Type</label>
+          <select id="dietary_type" name="dietary_type" class="form-select">
+            <option value="all">All Diets</option>
+            <option value="vegetarian" {% if current_dietary == 'vegetarian' %}selected{% endif %}>Vegetarian</option>
+            <option value="non_vegetarian" {% if current_dietary == 'non_vegetarian' %}selected{% endif %}>Non-Vegetarian</option>
+            <option value="vegan" {% if current_dietary == 'vegan' %}selected{% endif %}>Vegan</option>
+            <option value="other" {% if current_dietary == 'other' %}selected{% endif %}>Other</option>
+          </select>
+        </div>
+
+        <div>
+          <button type="submit" class="btn btn-primary" style="padding: 10px 18px;">Filter</button>
+          <a href="{{ url_for('discover_donations') }}" class="btn btn-outline" style="padding: 10px 14px;">Reset</a>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Donations Grid -->
+  {% if donations %}
+    <div class="donations-grid">
+      {% for d in donations %}
+        <div class="donation-card">
+          <div>
+            <div class="donation-header">
+              <span class="donation-food-name">{{ d.food_name }}</span>
+              <span class="badge {{ d.status | status_badge_class }}">{{ d.status }}</span>
+            </div>
+
+            <div class="donation-meta">
+              <span class="badge-dietary">{{ d.dietary_type }}</span>
+              <span style="font-size: 0.8rem; background: #f3f4f6; padding: 2px 8px; border-radius: 4px; color: #4b5563;">
+                {{ d.category.replace('_', ' ').capitalize() }}
+              </span>
+              {% if d.allergens %}
+                <span style="font-size: 0.75rem; background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 4px;">
+                  Allergens: {{ d.allergens | join(', ') }}
+                </span>
+              {% endif %}
+            </div>
+
+            <ul class="donation-details-list">
+              <li>
+                <span class="detail-label">Quantity:</span>
+                <strong>{{ d.servings }} Servings</strong>
+              </li>
+              <li>
+                <span class="detail-label">Pickup Area:</span>
+                <span>{{ d.pickup_location.area }}, {{ d.pickup_location.city }}</span>
+              </li>
+              <li>
+                <span class="detail-label">Prepared At:</span>
+                <span>{{ d.prepared_at | ist_format }}</span>
+              </li>
+              <li>
+                <span class="detail-label">Pickup Deadline:</span>
+                <span style="color: #b91c1c; font-weight: 600;">{{ d.pickup_deadline | ist_format }}</span>
+              </li>
+              <li>
+                <span class="detail-label">Donor:</span>
+                <span>{{ d.donor.organization_name or d.donor.name or "Verified Donor" }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="donation-actions">
+            {% if current_user %}
+              {% if current_user.role == 'receiver' %}
+                <form action="{{ url_for('claim_donation', donation_id=d._id) }}" method="POST" style="width: 100%;" data-confirm="Are you sure you want to claim this listing for {{ d.servings }} servings?">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    Claim for Rescue
+                  </button>
+                </form>
+              {% elif current_user.role == 'donor' and current_user.id == d.donor_id|string %}
+                <a href="{{ url_for('edit_donation', donation_id=d._id) }}" class="btn btn-outline btn-sm" style="width: 100%;">Manage Your Listing</a>
+              {% else %}
+                <span style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">
+                  Registered as Donor (Receivers can claim)
+                </span>
+              {% endif %}
+            {% else %}
+              <a href="{{ url_for('login') }}" class="btn btn-outline" style="width: 100%;">
+                Log In to Claim
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">&#128269;</div>
+      <h3>No Matching Surplus Food Found</h3>
+      <p>Try clearing your search query or selecting a different city/category filter.</p>
+      <a href="{{ url_for('discover_donations') }}" class="btn btn-outline btn-sm">Clear All Filters</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Receiver Dashboard — FoodLoop{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1>Receiver Dashboard</h1>
+    <p>Track your active food claims, verify pickups, and review completed rescues.</p>
+  </div>
+
+  <!-- Receiver Key Metrics -->
+  <div class="grid-3" style="margin-bottom: 35px;">
+    <div class="stat-card">
+      <div class="stat-label">Active Claims Awaiting Pickup</div>
+      <div class="stat-value" style="color: var(--status-claimed);">{{ stats.active_claims }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Successful Pickups Completed</div>
+      <div class="stat-value" style="color: var(--status-available);">{{ stats.total_collected }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Servings Distributed</div>
+      <div class="stat-value" style="color: #2563eb;">{{ stats.servings_received }}</div>
+    </div>
+  </div>
+
+  <!-- Section 1: Active Claims Awaiting Collection -->
+  <div class="card" style="padding: 24px; margin-bottom: 35px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h2 style="font-size: 1.3rem;">Active Claims Pending Collection</h2>
+      <span class="badge badge-claimed">{{ active_claims | length }} Active</span>
+    </div>
+
+    {% if active_claims %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Food Item</th>
+              <th>Quantity</th>
+              <th>Donor &amp; Pickup Location</th>
+              <th>Pickup Deadline</th>
+              <th>Claimed At</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in active_claims %}
+              <tr>
+                <td>
+                  <strong>{{ c.food_name }}</strong>
+                  <div style="font-size: 0.8rem; color: var(--text-muted);">
+                    {{ c.dietary_type.capitalize() }} &bull; {{ c.category.replace('_', ' ').capitalize() }}
+                  </div>
+                </td>
+                <td><strong>{{ c.servings }} Servings</strong></td>
+                <td>
+                  <strong>{{ c.donor.organization_name or c.donor.name }}</strong>
+                  <div style="font-size: 0.82rem; color: var(--text-muted);">
+                    {{ c.pickup_location.area }}, {{ c.pickup_location.city }}
+                  </div>
+                </td>
+                <td>
+                  <span style="color: #b91c1c; font-weight: 600; font-size: 0.88rem;">
+                    {{ c.pickup_deadline | ist_format }}
+                  </span>
+                </td>
+                <td style="font-size: 0.85rem;">
+                  {{ c.claim.claimed_at | ist_format('%d %b, %I:%M %p') }}
+                </td>
+                <td style="text-align: right;">
+                  <form action="{{ url_for('confirm_collection', donation_id=c._id) }}" method="POST" data-confirm="Confirm that you have picked up and received these {{ c.servings }} servings?">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-accent btn-sm">
+                      &#10003; Confirm Collection
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state" style="padding: 30px;">
+        <p style="color: var(--text-muted); margin-bottom: 12px;">You currently have no pending claims awaiting pickup.</p>
+        <a href="{{ url_for('discover_donations') }}" class="btn btn-primary btn-sm">Browse Available Donations</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Section 2: Recent Available Donations for Quick Claim -->
+  {% if available_recent %}
+    <div style="margin-bottom: 35px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 style="font-size: 1.3rem;">Recently Listed Donations Available Now</h2>
+        <a href="{{ url_for('discover_donations') }}" class="btn btn-outline btn-sm">View All &rarr;</a>
+      </div>
+      <div class="donations-grid">
+        {% for d in available_recent %}
+          <div class="donation-card">
+            <div>
+              <div class="donation-header">
+                <span class="donation-food-name">{{ d.food_name }}</span>
+                <span class="badge badge-available">available</span>
+              </div>
+              <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 10px;">
+                <strong>{{ d.servings }} servings</strong> &bull; {{ d.pickup_location.area }}, {{ d.pickup_location.city }}
+              </p>
+              <p style="font-size: 0.82rem; color: #b91c1c;">
+                Deadline: {{ d.pickup_deadline | ist_format }}
+              </p>
+            </div>
+            <div class="donation-actions" style="margin-top: 14px;">
+              <form action="{{ url_for('claim_donation', donation_id=d._id) }}" method="POST" style="width: 100%;" data-confirm="Claim this listing?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-primary btn-sm" style="width: 100%;">Claim Donation</button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Section 3: Past Completed Collections History -->
+  <div class="card" style="padding: 24px;">
+    <h2 style="font-size: 1.3rem; margin-bottom: 16px;">Past Collections &amp; Impact History</h2>
+
+    {% if collected_history %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Food Item</th>
+              <th>Category</th>
+              <th>Servings Rescued</th>
+              <th>Donor Organization</th>
+              <th>Collected At</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for h in collected_history %}
+              <tr>
+                <td><strong>{{ h.food_name }}</strong></td>
+                <td>{{ h.category.replace('_', ' ').capitalize() }}</td>
+                <td><strong style="color: var(--status-available);">+{{ h.servings }}</strong></td>
+                <td>{{ h.donor.organization_name or h.donor.name }}</td>
+                <td style="font-size: 0.88rem;">{{ h.collected_at | ist_format }}</td>
+                <td><span class="badge badge-collected">collected</span></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state" style="padding: 24px;">
+        <p style="color: var(--text-muted); margin: 0;">No completed collections on record yet.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

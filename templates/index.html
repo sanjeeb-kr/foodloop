@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}FoodLoop — Rescuing Surplus Food with MongoDB{% endblock %}
+
+{% block content %}
+<div class="container">
+  <!-- Hero Section -->
+  <section style="background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%); color: #ffffff; padding: 48px 36px; border-radius: var(--radius-lg); margin-bottom: 40px; box-shadow: var(--shadow-lg);">
+    <div style="max-width: 750px;">
+      <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+        Intelligent NoSQL Database Project
+      </span>
+      <h1 style="color: #ffffff; font-size: 2.6rem; margin: 16px 0 12px 0;">
+        Rescuing Surplus Food. Empowering Communities.
+      </h1>
+      <p style="font-size: 1.15rem; color: #d8f3dc; margin-bottom: 24px; line-height: 1.6;">
+        FoodLoop bridges campus canteens, bakeries, caterers, and food businesses with NGOs and community kitchens. We turn potential food waste into nutritious meals through real-time, MongoDB-backed matching.
+      </p>
+      <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+        <a href="{{ url_for('discover_donations') }}" class="btn btn-accent btn-lg">Discover Surplus Food</a>
+        {% if not current_user %}
+          <a href="{{ url_for('register') }}" class="btn btn-outline btn-lg" style="color: #ffffff; border-color: rgba(255,255,255,0.4);">Join as Donor or Receiver</a>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <!-- Live MongoDB Platform Metrics -->
+  <section style="margin-bottom: 45px;">
+    <div class="page-header">
+      <h2>Live Impact Metrics</h2>
+      <p>Calculated dynamically using real-time MongoDB aggregations.</p>
+    </div>
+    <div class="grid-4">
+      <div class="stat-card">
+        <div class="stat-label">Total Listings</div>
+        <div class="stat-value">{{ stats.total_donations }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Servings Rescued</div>
+        <div class="stat-value" style="color: var(--status-available);">{{ stats.collected_servings }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Available Now</div>
+        <div class="stat-value" style="color: var(--status-claimed);">{{ stats.available_servings }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Network Partners</div>
+        <div class="stat-value">{{ stats.donor_count + stats.receiver_count }}</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works Section -->
+  <section style="margin-bottom: 45px;">
+    <div class="page-header">
+      <h2>How FoodLoop Works</h2>
+      <p>A closed-loop system powered by atomic document operations and state-history tracking.</p>
+    </div>
+    <div class="grid-3">
+      <div class="card">
+        <div style="width: 44px; height: 44px; background: var(--primary-soft); color: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 14px; font-size: 1.2rem;">
+          1
+        </div>
+        <h3 class="card-title">Donors Post Food</h3>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">
+          Canteens, bakeries, or banquets specify surplus servings, preparation time, and safe pickup deadlines with schema-validated documents.
+        </p>
+      </div>
+      <div class="card">
+        <div style="width: 44px; height: 44px; background: var(--primary-soft); color: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 14px; font-size: 1.2rem;">
+          2
+        </div>
+        <h3 class="card-title">Atomic Claiming</h3>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">
+          Verified NGOs claim available food via conditional single-document updates, avoiding double-claiming race conditions without table locks.
+        </p>
+      </div>
+      <div class="card">
+        <div style="width: 44px; height: 44px; background: var(--primary-soft); color: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 14px; font-size: 1.2rem;">
+          3
+        </div>
+        <h3 class="card-title">Pickup &amp; Tracking</h3>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">
+          Receivers pick up surplus food and verify handover. Every transition is immutably logged into an embedded status history array.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Approaching Deadline / Urgent Surplus Food -->
+  <section style="margin-bottom: 30px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px;">
+      <div>
+        <h2>Fresh Listings Approaching Deadline</h2>
+        <p style="color: var(--text-muted);">Pickups sorted by closest expiration time for rapid rescue.</p>
+      </div>
+      <a href="{{ url_for('discover_donations') }}" class="btn btn-outline btn-sm">View All Listings &rarr;</a>
+    </div>
+
+    {% if recent_donations %}
+      <div class="donations-grid">
+        {% for d in recent_donations %}
+          <div class="donation-card">
+            <div>
+              <div class="donation-header">
+                <span class="donation-food-name">{{ d.food_name }}</span>
+                <span class="badge {{ d.status | status_badge_class }}">{{ d.status }}</span>
+              </div>
+              
+              <div class="donation-meta">
+                <span class="badge-dietary">{{ d.dietary_type }}</span>
+                <span style="font-size: 0.8rem; background: #f3f4f6; padding: 2px 8px; border-radius: 4px; color: #4b5563;">
+                  {{ d.category.replace('_', ' ').capitalize() }}
+                </span>
+              </div>
+
+              <ul class="donation-details-list">
+                <li>
+                  <span class="detail-label">Servings:</span>
+                  <strong>{{ d.servings }} people</strong>
+                </li>
+                <li>
+                  <span class="detail-label">Location:</span>
+                  <span>{{ d.pickup_location.area }}, {{ d.pickup_location.city }}</span>
+                </li>
+                <li>
+                  <span class="detail-label">Pickup Deadline:</span>
+                  <span style="color: #b91c1c; font-weight: 600;">{{ d.pickup_deadline | ist_format }}</span>
+                </li>
+                <li>
+                  <span class="detail-label">Donor:</span>
+                  <span>{{ d.donor.organization_name or d.donor.name or "Partner Donor" }}</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="donation-actions">
+              {% if current_user and current_user.role == 'receiver' %}
+                <form action="{{ url_for('claim_donation', donation_id=d._id) }}" method="POST" style="width: 100%;" data-confirm="Claim this donation of {{ d.servings }} servings?">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-primary" style="width: 100%;">Claim Donation</button>
+                </form>
+              {% elif not current_user %}
+                <a href="{{ url_for('login') }}" class="btn btn-outline" style="width: 100%;">Log in to Claim</a>
+              {% else %}
+                <span style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">
+                  Available for Receiver claim
+                </span>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon">&#127822;</div>
+        <h3>No Available Donations Right Now</h3>
+        <p>All surplus food has either been claimed or safely collected. Check back soon!</p>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {% if action == 'create' %}Publish Food Donation — FoodLoop{% else %}Edit Food Listing — FoodLoop{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 680px;">
+  <div class="page-header">
+    <h1>{% if action == 'create' %}Post Surplus Food{% else %}Edit Food Donation{% endif %}</h1>
+    <p>Provide accurate details to ensure timely, safe redistribution by local NGOs.</p>
+  </div>
+
+  <div class="card" style="padding: 32px;">
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="form-group">
+        <label class="form-label" for="food_name">Food Name / Description *</label>
+        <input type="text" id="food_name" name="food_name" class="form-control" value="{{ form_data.get('food_name', '') }}" placeholder="e.g. Fresh Vegetable Biryani &amp; Raita" required>
+        <div class="form-help">Be specific regarding items, preparation, and freshness.</div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-col form-group">
+          <label class="form-label" for="category">Category *</label>
+          <select id="category" name="category" class="form-select" required>
+            <option value="" disabled selected>-- Select category --</option>
+            <option value="prepared_meal" {% if form_data.get('category') == 'prepared_meal' %}selected{% endif %}>Prepared Meal (Cooked Food)</option>
+            <option value="bakery" {% if form_data.get('category') == 'bakery' %}selected{% endif %}>Bakery &amp; Bread</option>
+            <option value="fruits_vegetables" {% if form_data.get('category') == 'fruits_vegetables' %}selected{% endif %}>Fruits &amp; Vegetables</option>
+            <option value="packaged_food" {% if form_data.get('category') == 'packaged_food' %}selected{% endif %}>Packaged / Shelf-Stable</option>
+            <option value="other" {% if form_data.get('category') == 'other' %}selected{% endif %}>Other</option>
+          </select>
+        </div>
+
+        <div class="form-col form-group">
+          <label class="form-label" for="servings">Number of Servings *</label>
+          <input type="number" id="servings" name="servings" class="form-control" value="{{ form_data.get('servings', '') }}" min="1" placeholder="e.g. 50" required>
+          <div class="form-help">Must be a positive whole number (&ge; 1).</div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-col form-group">
+          <label class="form-label" for="dietary_type">Dietary Classification *</label>
+          <select id="dietary_type" name="dietary_type" class="form-select" required>
+            <option value="vegetarian" {% if form_data.get('dietary_type') == 'vegetarian' %}selected{% endif %}>Vegetarian</option>
+            <option value="non_vegetarian" {% if form_data.get('dietary_type') == 'non_vegetarian' %}selected{% endif %}>Non-Vegetarian</option>
+            <option value="vegan" {% if form_data.get('dietary_type') == 'vegan' %}selected{% endif %}>Vegan</option>
+            <option value="other" {% if form_data.get('dietary_type') == 'other' %}selected{% endif %}>Other</option>
+          </select>
+        </div>
+
+        <div class="form-col form-group">
+          <label class="form-label" for="allergens">Allergen Tags</label>
+          <input type="text" id="allergens" name="allergens" class="form-control" value="{{ form_data.get('allergens', '') }}" placeholder="dairy, gluten, nuts (comma-separated)">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-col form-group">
+          <label class="form-label" for="prepared_at">Prepared At (IST Time) *</label>
+          <input type="datetime-local" id="prepared_at" name="prepared_at" class="form-control" value="{{ form_data.get('prepared_at', '') }}" required>
+          <div class="form-help">When the meal was cooked or packaged.</div>
+        </div>
+
+        <div class="form-col form-group">
+          <label class="form-label" for="pickup_deadline">Pickup Deadline (IST Time) *</label>
+          <input type="datetime-local" id="pickup_deadline" name="pickup_deadline" class="form-control" value="{{ form_data.get('pickup_deadline', '') }}" required>
+          <div class="form-help">Latest safe time for receiver collection.</div>
+        </div>
+      </div>
+
+      <div class="card" style="background: #f9fafb; margin: 18px 0; padding: 18px; border-style: dashed;">
+        <h4 style="font-size: 0.95rem; margin-bottom: 12px; color: var(--primary-color);">Embedded Pickup Location</h4>
+        <div class="form-row">
+          <div class="form-col form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="area">Street / Campus Area *</label>
+            <input type="text" id="area" name="area" class="form-control" value="{{ form_data.get('area', '') }}" placeholder="e.g. Block C Canteen, Campus North" required>
+          </div>
+          <div class="form-col form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="city">City *</label>
+            <input type="text" id="city" name="city" class="form-control" value="{{ form_data.get('city', '') }}" placeholder="e.g. Bengaluru" required>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-top: 24px;">
+        <button type="submit" class="btn btn-primary" style="flex: 1; padding: 11px;">
+          {% if action == 'create' %}Publish Food Donation{% else %}Save Changes{% endif %}
+        </button>
+        <a href="{{ url_for('donor_dashboard') }}" class="btn btn-outline" style="padding: 11px 20px;">
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

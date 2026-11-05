@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Server Error (500) — FoodLoop{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 550px; text-align: center; padding: 60px 20px;">
+  <div style="font-size: 4.5rem; font-weight: 800; color: #b91c1c; line-height: 1;">500</div>
+  <h1 style="font-size: 1.8rem; margin: 16px 0 10px 0;">Internal Service Error</h1>
+  <p style="color: var(--text-muted); margin-bottom: 24px;">
+    An unexpected database or server error occurred while processing your request. Please verify your connection to MongoDB Atlas and try again shortly.
+  </p>
+  <a href="{{ url_for('index') }}" class="btn btn-primary">Return to Homepage</a>
+</div>
+{% endblock %}
